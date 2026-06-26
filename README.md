@@ -41,6 +41,8 @@ Candidate ingredients include:
 - tool-type-conditioned value estimation
 - cost-aware clipping or auxiliary objectives
 - trajectory segmentation around edits and test outcomes
+- compacted sub-trace training for very long rollouts
+- online anti-hack signals that penalize invalid actions without discarding entire trajectories
 
 ### 2. Benchmarking
 
@@ -76,6 +78,19 @@ Key questions include:
 - Can internal signals explain over-searching, over-testing, or premature stopping?
 
 This part of the project is meant to connect RL for coding agents with mechanistic and behavioral interpretability.
+
+## Value Modeling Hypothesis
+
+PAPPO treats the value model as a first-class research object.
+
+For long-horizon coding agents, the critic should estimate more than final task success. A strong value model should also track patch progress, tool utility, future cost, compaction quality, and failure risk. This enables more stable advantage estimation, better use of compacted sub-traces, more robust handling of abnormal or hacked actions, and clearer interpretation of tool-use behavior.
+
+The working hypothesis is:
+
+- GRPO-style group-relative learning is strong for short, comparable rollouts.
+- Long-horizon coding agents produce irregular trajectories with variable length, tool calls, edits, tests, and compaction boundaries.
+- In this setting, PAPPO should use critic-based token-level advantages over individual compacted sub-traces.
+- Invalid or hacked tool calls should be handled online by penalizing the bad action while preserving the rest of the rollout when possible.
 
 ## Research Goals
 
