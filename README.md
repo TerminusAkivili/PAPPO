@@ -34,6 +34,7 @@ Target properties:
 - better credit assignment across read, search, edit, and test actions
 - support for tool-aware or patch-aware advantages
 - explicit treatment of action costs without collapsing useful exploration
+- turn-level critic signals at the tool-call granularity
 
 Candidate ingredients include:
 
@@ -43,6 +44,7 @@ Candidate ingredients include:
 - trajectory segmentation around edits and test outcomes
 - compacted sub-trace training for very long rollouts
 - online anti-hack signals that penalize invalid actions without discarding entire trajectories
+- explicit belief blocks for long-horizon task state tracking
 
 ### 2. Benchmarking
 
@@ -89,7 +91,9 @@ The working hypothesis is:
 
 - GRPO-style group-relative learning is strong for short, comparable rollouts.
 - Long-horizon coding agents produce irregular trajectories with variable length, tool calls, edits, tests, and compaction boundaries.
-- In this setting, PAPPO should use critic-based token-level advantages over individual compacted sub-traces.
+- In this setting, PAPPO should use critic-based turn-level advantages over individual compacted sub-traces.
+- Tool-call turns are a natural credit-assignment unit: they are coarser than tokens, finer than full traces, and often contain enough semantic content for incremental evaluation.
+- Optional belief blocks can expose the agent's current task model, making both actor behavior and critic estimates easier to study.
 - Invalid or hacked tool calls should be handled online by penalizing the bad action while preserving the rest of the rollout when possible.
 
 ## Research Goals

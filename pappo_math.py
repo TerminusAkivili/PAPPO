@@ -11,10 +11,10 @@ Core thesis
 For long-horizon coding agents, standard PPO is usually limited less by the
 clipped surrogate itself and more by weak advantage estimation. A coding-agent
 trajectory contains tool calls, patch edits, test runs, failed attempts,
-state-changing repository updates, and compacted sub-traces. PAPPO therefore
-makes the value model a first-class object and uses structured advantages for
-success, patch progress, tool utility, future cost, compaction consistency, and
-failure risk.
+state-changing repository updates, tool-call turns, explicit belief states, and
+compacted sub-traces. PAPPO therefore makes the value model a first-class
+object and uses structured advantages for success, patch progress, tool utility,
+belief quality, future cost, compaction consistency, and failure risk.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ class PAPPOWeights:
             A_success
             + lambda_patch * A_patch
             + lambda_tool * A_tool
+            + lambda_belief * A_belief
             + lambda_compact * A_compact
             - lambda_cost * A_cost
             - lambda_risk * A_risk
@@ -43,6 +44,7 @@ class PAPPOWeights:
 
     lambda_patch: float = 1.0
     lambda_tool: float = 1.0
+    lambda_belief: float = 0.5
     lambda_compact: float = 0.5
     lambda_cost: float = 0.2
     lambda_risk: float = 0.5
@@ -55,6 +57,7 @@ class StructuredAdvantage:
     success: float
     patch: float
     tool: float
+    belief: float
     compact: float
     cost: float
     risk: float
@@ -74,6 +77,11 @@ class StructuredValue:
         Expected marginal utility of taking a specific tool action from the
         current state.
 
+    V_belief:
+        Expected usefulness and faithfulness of the agent's explicit belief
+        state. This measures whether the agent's current compact task model is
+        likely to support future progress.
+
     V_cost:
         Expected remaining tool, token, test, or wall-clock cost.
 
@@ -90,9 +98,47 @@ class StructuredValue:
     success: float
     patch: float
     tool: float
+    belief: float
     compact: float
     cost: float
     risk: float
+
+
+@dataclass(frozen=True)
+class ToolCallTurn:
+    """A natural critic step for agentic coding RL.
+
+    A turn is coarser than a token but much smaller than a full trace:
+
+        belief_before -> reasoning/action -> tool_call -> tool_result -> belief_after
+
+    This is the main PAPPO credit-assignment unit. Token-level loss can still be
+    used inside a turn, but the critic target should primarily explain whether
+    the turn improved the agent's future repair probability.
+    """
+
+    tool: str
+    start_token: int
+    end_token: int
+    cost: float
+    hack_detected: bool = False
+
+
+@dataclass(frozen=True)
+class BeliefState:
+    """Explicit compact state maintained by the coding agent.
+
+    The belief block is a structured summary of what the agent currently thinks
+    is true about the task, repository, failure mode, patch plan, and remaining
+    uncertainty. It can make both actor and critic training easier than forcing
+    them to reconstruct the task state from a long raw context.
+    """
+
+    task_summary: str
+    relevant_files: tuple[str, ...]
+    failure_hypothesis: str
+    patch_plan: str
+    uncertainty: str
 
 
 @dataclass(frozen=True)
@@ -134,6 +180,7 @@ def pappo_advantage(
         advantage.success
         + weights.lambda_patch * advantage.patch
         + weights.lambda_tool * advantage.tool
+        + weights.lambda_belief * advantage.belief
         + weights.lambda_compact * advantage.compact
         - weights.lambda_cost * advantage.cost
         - weights.lambda_risk * advantage.risk
@@ -186,6 +233,47 @@ def token_level_pappo_objective(
     return sum(token_losses) / len(token_losses)
 
 
+def turn_level_pappo_objective(
+    turns: list[ToolCallTurn],
+    token_probability_ratios: list[list[float]],
+    turn_advantages: list[float],
+    epsilon: float = 0.2,
+) -> float:
+    """PAPPO objective averaged at tool-call turn granularity.
+
+    The key design choice from recent long-horizon agentic RL discussion is that
+    the critic should usually not operate at pure token granularity. Token-level
+    value can have poor signal-to-noise. Full-trace value is too coarse. A
+    tool-call turn is a cheap, scalable middle unit: it contains an action, an
+    external result, and enough semantic mass for incremental evaluation.
+
+    For each turn, PAPPO applies one turn advantage to all policy tokens inside
+    that turn, averages token losses within the turn, then averages across
+    turns. This prevents long turns from dominating while preserving PPO's
+    token-level log-prob machinery.
+    """
+
+    if not (
+        len(turns) == len(token_probability_ratios) == len(turn_advantages)
+    ):
+        raise ValueError("turns, ratios, and advantages must have same length")
+    if not turns:
+        return 0.0
+
+    turn_losses = []
+    for ratios, advantage in zip(
+        token_probability_ratios, turn_advantages, strict=True
+    ):
+        turn_losses.append(
+            token_level_pappo_objective(
+                probability_ratios=ratios,
+                advantages=[advantage] * len(ratios),
+                epsilon=epsilon,
+            )
+        )
+    return sum(turn_losses) / len(turn_losses)
+
+
 def tool_marginal_utility(
     value_before: StructuredValue,
     value_after: StructuredValue,
@@ -205,7 +293,32 @@ def tool_marginal_utility(
 
     delta_success = value_after.success - value_before.success
     delta_patch = value_after.patch - value_before.patch
-    return delta_success + delta_patch - cost_weight * tool_cost
+    delta_belief = value_after.belief - value_before.belief
+    return delta_success + delta_patch + delta_belief - cost_weight * tool_cost
+
+
+def belief_update_delta(
+    value_before_belief: StructuredValue,
+    value_after_belief: StructuredValue,
+    expected_delta: float = 0.0,
+) -> float:
+    """Credit for maintaining or improving the explicit belief block.
+
+    A good belief update should make the current task state easier for both the
+    actor and critic to use. It may improve future success even before any tool
+    call is made, which gives PAPPO a step-like supervision target for
+    reasoning-only spans as well.
+    """
+
+    observed_delta = (
+        value_after_belief.success
+        - value_before_belief.success
+        + value_after_belief.belief
+        - value_before_belief.belief
+        + value_after_belief.compact
+        - value_before_belief.compact
+    )
+    return observed_delta - expected_delta
 
 
 def patch_delta(
@@ -252,6 +365,8 @@ def compaction_consistency(
         - value_before_compaction.success
         + value_after_compaction.patch
         - value_before_compaction.patch
+        + value_after_compaction.belief
+        - value_before_compaction.belief
         + value_after_compaction.compact
         - value_before_compaction.compact
     )
@@ -279,6 +394,7 @@ def hack_adjusted_advantage(
         success=advantage.success,
         patch=advantage.patch,
         tool=advantage.tool,
+        belief=advantage.belief,
         compact=advantage.compact,
         cost=advantage.cost,
         risk=advantage.risk + risk_penalty,
@@ -296,6 +412,7 @@ def value_model_loss_terms() -> dict[str, str]:
         "L_success": "predict final task success or final return",
         "L_patch": "predict patch-state improvement after edits",
         "L_tool": "predict marginal value delta of tool calls",
+        "L_belief": "predict usefulness and faithfulness of explicit belief updates",
         "L_compact": "predict whether compacted sub-traces preserve task state",
         "L_cost": "predict remaining tool, token, test, or wall-clock cost",
         "L_risk": "predict abnormal, hacked, looping, or destructive trajectories",
@@ -310,6 +427,9 @@ Trajectory:
 Hybrid coding-agent action:
     a_t = (tool_t, args_t, emitted_tokens_t)
 
+Primary credit-assignment unit:
+    turn_k = (belief_before, reasoning/action, tool_call, tool_result, belief_after)
+
 Task objective:
     J(theta) = E_{tau ~ pi_theta}[
         R_success(tau)
@@ -323,20 +443,21 @@ Structured PAPPO advantage:
         A_t^success
         + lambda_patch * A_t^patch
         + lambda_tool * A_t^tool
+        + lambda_belief * A_t^belief
         + lambda_compact * A_t^compact
         - lambda_cost * A_t^cost
         - lambda_risk * A_t^risk
 
-Token-level PAPPO clipped surrogate:
-    L_PAPPO(theta) = E_subtrace E_token[
+Turn-level PAPPO clipped surrogate:
+    L_PAPPO(theta) = E_subtrace E_turn E_token_in_turn[
         min(
-            r_t(theta) * A_t^PAPPO,
-            clip(r_t(theta), 1 - eps, 1 + eps) * A_t^PAPPO
+            r_i(theta) * A_turn^PAPPO,
+            clip(r_i(theta), 1 - eps, 1 + eps) * A_turn^PAPPO
         )
     ]
 
 where:
-    r_t(theta) = pi_theta(a_t | s_t) / pi_old(a_t | s_t)
+    r_i(theta) = pi_theta(token_i | context_i) / pi_old(token_i | context_i)
 
 Compacted sub-trace training:
     long rollouts are split into variable-length trainable sub-traces.
@@ -346,6 +467,11 @@ Compacted sub-trace training:
 Online anti-hack handling:
     suspicious tool calls are blocked or replaced with dummy observations,
     increasing A_risk for that action while preserving the rest of the rollout.
+
+Belief block:
+    the agent maintains an explicit belief state after observations and tool
+    results. This gives the critic a compact target for evaluating process
+    quality and gives the actor a stable state representation for long tasks.
 """
 
 
@@ -354,6 +480,7 @@ if __name__ == "__main__":
         success=0.8,
         patch=0.3,
         tool=0.2,
+        belief=0.15,
         compact=0.1,
         cost=0.1,
         risk=0.05,
