@@ -24,4 +24,4 @@ keywords:
 identifiers:
   - type: url
     value: "https://github.com/TerminusAkivili/PAPPO/tree/5d345d06c735dd263ab0a85f24200c52dd9993e5"
-    description: "Exact Git commit for the v0.1.0 true-PPO reproducibility package"
+    description: "Core experiment commit for the v0.1.0 true-PPO reproducibility package"

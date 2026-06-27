@@ -25,7 +25,7 @@ update 3 and update 4. See
 
 ## Citation And Archival Trace
 
-- Fixed commit:
+- Core experiment commit:
   `5d345d06c735dd263ab0a85f24200c52dd9993e5`
 - Release tag: `v0.1.0-trueppo`
 - Citation metadata: [`CITATION.cff`](CITATION.cff)

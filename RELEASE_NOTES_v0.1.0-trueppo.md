@@ -7,7 +7,8 @@ package.
 
 - Repository: `https://github.com/TerminusAkivili/PAPPO`
 - Tag: `v0.1.0-trueppo`
-- Commit: `5d345d06c735dd263ab0a85f24200c52dd9993e5`
+- Core experiment commit:
+  `5d345d06c735dd263ab0a85f24200c52dd9993e5`
 
 ## Included
 
