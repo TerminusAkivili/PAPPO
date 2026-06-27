@@ -23,6 +23,19 @@ PAPPO-PPO wins on all three seeds and keeps 1.0000 held-out success for both
 update 3 and update 4. See
 [`docs/pappo_true_ppo_results.md`](docs/pappo_true_ppo_results.md).
 
+## Citation And Archival Trace
+
+- Fixed commit:
+  `5d345d06c735dd263ab0a85f24200c52dd9993e5`
+- Release tag: `v0.1.0-trueppo`
+- Citation metadata: [`CITATION.cff`](CITATION.cff)
+- Zenodo metadata: [`.zenodo.json`](.zenodo.json)
+- Release notes:
+  [`RELEASE_NOTES_v0.1.0-trueppo.md`](RELEASE_NOTES_v0.1.0-trueppo.md)
+
+The Zenodo DOI and Software Heritage SWHID should be added here after the
+release is archived by those services.
+
 ## Key Paths
 
 - PPO objective and logprob handling: `pappo/ppo_training.py`

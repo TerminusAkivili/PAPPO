@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use PAPPO, please cite the archived software release."
+type: software
+title: "PAPPO: Turn-Local Proximal Policy Optimization for Tool-Using Coding Agents"
+authors:
+  - family-names: "TerminusAkivili"
+version: "0.1.0-trueppo"
+date-released: "2026-06-28"
+repository-code: "https://github.com/TerminusAkivili/PAPPO"
+url: "https://github.com/TerminusAkivili/PAPPO/releases/tag/v0.1.0-trueppo"
+abstract: >-
+  PAPPO is a research prototype for Patch-Aware Proximal Policy Optimization
+  on tool-using coding agents. This release contains the true-PPO
+  RealRepoFix-100 reproducibility package, including focused PPO mechanics,
+  RealRepoFix task files, deterministic non-PPO baseline reports, and
+  three-seed PAPPO-PPO result reports.
+keywords:
+  - reinforcement learning
+  - proximal policy optimization
+  - coding agents
+  - software engineering agents
+  - LoRA
+  - RealRepoFix
+identifiers:
+  - type: url
+    value: "https://github.com/TerminusAkivili/PAPPO/tree/5d345d06c735dd263ab0a85f24200c52dd9993e5"
+    description: "Exact Git commit for the v0.1.0 true-PPO reproducibility package"

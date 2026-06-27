@@ -9,6 +9,7 @@ outputs/
 runs/
 wandb/
 *.egg-info/
+requirements.txt
 
 # Publish only the final true-PPO reproducibility package.
 docs/*

@@ -1,0 +1,25 @@
+{
+  "title": "PAPPO: Turn-Local Proximal Policy Optimization for Tool-Using Coding Agents",
+  "upload_type": "software",
+  "description": "PAPPO is a research prototype for Patch-Aware Proximal Policy Optimization on tool-using coding agents. This release contains the true-PPO RealRepoFix-100 reproducibility package, including the PPO implementation, RealRepoFix task files, deterministic non-PPO baseline reports, three-seed PAPPO-PPO result reports, and focused tests.",
+  "creators": [
+    {
+      "name": "TerminusAkivili"
+    }
+  ],
+  "keywords": [
+    "reinforcement learning",
+    "proximal policy optimization",
+    "coding agents",
+    "software engineering agents",
+    "LoRA",
+    "RealRepoFix"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/TerminusAkivili/PAPPO/tree/5d345d06c735dd263ab0a85f24200c52dd9993e5",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
