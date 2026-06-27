@@ -9,6 +9,8 @@ package.
 - Tag: `v0.1.0-trueppo`
 - Core experiment commit:
   `5d345d06c735dd263ab0a85f24200c52dd9993e5`
+- Software Heritage snapshot:
+  `swh:1:snp:51a2836ced67734772ba3c5f0bfa69d4b48e1427`
 
 ## Included
 

@@ -32,9 +32,11 @@ update 3 and update 4. See
 - Zenodo metadata: [`.zenodo.json`](.zenodo.json)
 - Release notes:
   [`RELEASE_NOTES_v0.1.0-trueppo.md`](RELEASE_NOTES_v0.1.0-trueppo.md)
+- Software Heritage snapshot:
+  `swh:1:snp:51a2836ced67734772ba3c5f0bfa69d4b48e1427`
 
-The Zenodo DOI and Software Heritage SWHID should be added here after the
-release is archived by those services.
+The Zenodo DOI should be added here after the GitHub-Zenodo integration archives
+the release.
 
 ## Key Paths
 
