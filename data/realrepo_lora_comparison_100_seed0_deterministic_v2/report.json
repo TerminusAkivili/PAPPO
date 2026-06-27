@@ -1,0 +1,215 @@
+{
+  "adapter_dirs": {
+    "grpo_lite": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/grpo_lite/adapter",
+    "pappo_turn": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/pappo_turn/adapter",
+    "pappo_turn_v2": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/pappo_turn_v2/adapter",
+    "pappo_turn_v3": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/pappo_turn_v3/adapter",
+    "token_broadcast": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/token_broadcast/adapter",
+    "trace": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/trace/adapter"
+  },
+  "backend": "hf",
+  "base_metrics": {
+    "avg_tool_cost": 8.5,
+    "edit_success_rate": 0.8333333333333334,
+    "failed_edit_rate": 0.16666666666666666,
+    "repeated_test_rate": 0.0,
+    "retry_task_success_rate": 1.0,
+    "search_usefulness": 1.0,
+    "success_rate": 0.8333333333333334
+  },
+  "delta_vs_base": {
+    "grpo_lite": {
+      "avg_tool_cost": 0.0,
+      "edit_success_rate": 0.0,
+      "failed_edit_rate": 0.0,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 0.0,
+      "search_usefulness": 0.0,
+      "success_rate": 0.0
+    },
+    "pappo_turn": {
+      "avg_tool_cost": 0.0,
+      "edit_success_rate": -0.033333333333333326,
+      "failed_edit_rate": 0.033333333333333354,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 0.0,
+      "search_usefulness": 0.0,
+      "success_rate": -0.033333333333333326
+    },
+    "pappo_turn_v2": {
+      "avg_tool_cost": 0.0,
+      "edit_success_rate": 0.0,
+      "failed_edit_rate": 0.0,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 0.0,
+      "search_usefulness": 0.0,
+      "success_rate": 0.0
+    },
+    "pappo_turn_v3": {
+      "avg_tool_cost": 0.0,
+      "edit_success_rate": 0.0,
+      "failed_edit_rate": 0.0,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 0.0,
+      "search_usefulness": 0.0,
+      "success_rate": 0.0
+    },
+    "token_broadcast": {
+      "avg_tool_cost": 0.0,
+      "edit_success_rate": -0.033333333333333326,
+      "failed_edit_rate": 0.033333333333333354,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 0.0,
+      "search_usefulness": 0.0,
+      "success_rate": -0.033333333333333326
+    },
+    "trace": {
+      "avg_tool_cost": 0.0,
+      "edit_success_rate": 0.0,
+      "failed_edit_rate": 0.0,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 0.0,
+      "search_usefulness": 0.0,
+      "success_rate": 0.0
+    }
+  },
+  "eval_start": 70,
+  "eval_tasks": 30,
+  "methods": [
+    "trace",
+    "token_broadcast",
+    "pappo_turn",
+    "pappo_turn_v2",
+    "pappo_turn_v3",
+    "grpo_lite"
+  ],
+  "metrics": {
+    "grpo_lite": {
+      "avg_tool_cost": 8.5,
+      "edit_success_rate": 0.8333333333333334,
+      "failed_edit_rate": 0.16666666666666666,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 1.0,
+      "search_usefulness": 1.0,
+      "success_rate": 0.8333333333333334
+    },
+    "pappo_turn": {
+      "avg_tool_cost": 8.5,
+      "edit_success_rate": 0.8,
+      "failed_edit_rate": 0.2,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 1.0,
+      "search_usefulness": 1.0,
+      "success_rate": 0.8
+    },
+    "pappo_turn_v2": {
+      "avg_tool_cost": 8.5,
+      "edit_success_rate": 0.8333333333333334,
+      "failed_edit_rate": 0.16666666666666666,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 1.0,
+      "search_usefulness": 1.0,
+      "success_rate": 0.8333333333333334
+    },
+    "pappo_turn_v3": {
+      "avg_tool_cost": 8.5,
+      "edit_success_rate": 0.8333333333333334,
+      "failed_edit_rate": 0.16666666666666666,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 1.0,
+      "search_usefulness": 1.0,
+      "success_rate": 0.8333333333333334
+    },
+    "token_broadcast": {
+      "avg_tool_cost": 8.5,
+      "edit_success_rate": 0.8,
+      "failed_edit_rate": 0.2,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 1.0,
+      "search_usefulness": 1.0,
+      "success_rate": 0.8
+    },
+    "trace": {
+      "avg_tool_cost": 8.5,
+      "edit_success_rate": 0.8333333333333334,
+      "failed_edit_rate": 0.16666666666666666,
+      "repeated_test_rate": 0.0,
+      "retry_task_success_rate": 1.0,
+      "search_usefulness": 1.0,
+      "success_rate": 0.8333333333333334
+    }
+  },
+  "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+  "seed": 0,
+  "status": "realrepo_lora_comparison_completed",
+  "train_reports": {
+    "grpo_lite": {
+      "adapter_dir": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/grpo_lite/adapter",
+      "checkpoints": 0,
+      "epochs": 5,
+      "examples": 280,
+      "loss": 0.009676,
+      "method": "grpo_lite",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "status": "lora_pappo_step_completed",
+      "trainable_parameters": 2523136
+    },
+    "pappo_turn": {
+      "adapter_dir": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/pappo_turn/adapter",
+      "checkpoints": 0,
+      "epochs": 5,
+      "examples": 280,
+      "loss": 1.070671,
+      "method": "pappo_turn",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "status": "lora_pappo_step_completed",
+      "trainable_parameters": 2523136
+    },
+    "pappo_turn_v2": {
+      "adapter_dir": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/pappo_turn_v2/adapter",
+      "checkpoints": 0,
+      "epochs": 5,
+      "examples": 280,
+      "loss": 1.063805,
+      "method": "pappo_turn_v2",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "status": "lora_pappo_step_completed",
+      "trainable_parameters": 2523136
+    },
+    "pappo_turn_v3": {
+      "adapter_dir": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/pappo_turn_v3/adapter",
+      "checkpoints": 0,
+      "epochs": 5,
+      "examples": 280,
+      "loss": 2.739936,
+      "method": "pappo_turn_v3",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "status": "lora_pappo_step_completed",
+      "trainable_parameters": 2523136
+    },
+    "token_broadcast": {
+      "adapter_dir": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/token_broadcast/adapter",
+      "checkpoints": 0,
+      "epochs": 5,
+      "examples": 280,
+      "loss": 2.100693,
+      "method": "token_broadcast",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "status": "lora_pappo_step_completed",
+      "trainable_parameters": 2523136
+    },
+    "trace": {
+      "adapter_dir": "data/realrepo_lora_comparison_100_seed0_deterministic_v2/trace/adapter",
+      "checkpoints": 0,
+      "epochs": 5,
+      "examples": 70,
+      "loss": 1.852842,
+      "method": "trace",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "status": "lora_pappo_step_completed",
+      "trainable_parameters": 2523136
+    }
+  },
+  "train_start": 0,
+  "train_tasks": 70
+}

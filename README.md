@@ -1,140 +1,148 @@
 # PAPPO
 
-`PAPPO` is a research project on reinforcement learning for tool-using coding agents.
+PAPPO is a research prototype for **Patch-Aware Proximal Policy Optimization**
+on tool-using coding agents.
 
-The core idea is simple: modern software engineering agents do not only generate code. They read repositories, search for symbols, edit files, run tests, inspect failures, and iterate over long trajectories. These behaviors are naturally sequential and budget-sensitive, which makes them a strong fit for policy optimization. PAPPO focuses on building a PPO-style algorithm specialized for this setting, together with the benchmarks and interpretability tools needed to study it rigorously.
+This repository currently publishes the final RealRepoFix-100 true-PPO evidence
+package: the runnable PPO loop, the RealRepoFix task set, deterministic baseline
+reports, three-seed PAPPO-PPO reports, and focused tests for the PPO mechanics.
 
-## Project Overview
+## Current Result
 
-PAPPO stands for `Patch-Aware Proximal Policy Optimization`.
+Model: `Qwen/Qwen2.5-Coder-7B-Instruct`
 
-The project asks three connected questions:
+Benchmark: RealRepoFix-100 with 70 train tasks and 30 held-out eval tasks per
+seed.
 
-1. How should PPO be adapted for multi-step coding agents that alternate between reading, searching, editing, and testing?
-2. Which benchmark protocol best measures long-horizon coding-agent quality beyond final pass rate alone?
-3. What internal signals explain why an agent decides to spend effort on a tool call, commit a patch, or stop iterating?
+| Method | Mean Success | Failed Edit | Avg Tool Cost | Repeated Test |
+| --- | ---: | ---: | ---: | ---: |
+| Best non-PPO baseline | 0.8667 | 0.1333 | 8.50 | 0.0000 |
+| PAPPO true PPO | 1.0000 | 0.0000 | 8.50 | 0.0000 |
 
-PAPPO is intentionally centered on the RL algorithm itself rather than a general-purpose runtime framework. The main deliverables are expected to be:
+PAPPO-PPO wins on all three seeds and keeps 1.0000 held-out success for both
+update 3 and update 4. See
+[`docs/pappo_true_ppo_results.md`](docs/pappo_true_ppo_results.md).
 
-- a task-specific PPO variant for tool-using coding agents
-- a reproducible benchmark recipe for long-horizon software engineering tasks
-- interpretability analyses for agent behavior, cost trade-offs, and failure modes
+## Key Paths
 
-## Research Architecture
+- PPO objective and logprob handling: `pappo/ppo_training.py`
+- PPO sample extraction: `pappo/ppo_rollout.py`
+- Turn/group critic: `pappo/turn_critic.py`
+- RealRepoFix task and agent backends: `pappo/realrepofix.py`,
+  `pappo/llm_agent_pilot.py`
+- True-PPO experiment runner: `scripts/run_realrepo_pappo_ppo.py`
+- Baseline runner used for comparison: `scripts/run_realrepo_lora_comparison.py`
+- RealRepoFix manifest: `data/realrepofix_100_manifest.jsonl`
+- Final result reports:
+  - `data/realrepo_lora_comparison_100_seed0_deterministic_v2/report.json`
+  - `data/realrepo_lora_comparison_100_seed1_deterministic_v2/report.json`
+  - `data/realrepo_lora_comparison_100_seed2_deterministic_v2/report.json`
+  - `data/realrepo_pappo_ppo_100_seed0_grouped_prior_lr1e4_nonorm_updates5_v2/report.json`
+  - `data/realrepo_pappo_ppo_100_seed1_grouped_prior_lr1e4_nonorm_updates5/report.json`
+  - `data/realrepo_pappo_ppo_100_seed2_grouped_prior_lr1e4_nonorm_updates5/report.json`
 
-The repository is organized around three research layers.
+Large adapter weights, exploratory rollout dumps, and intermediate artifacts are
+intentionally not tracked.
 
-### 1. RL Algorithm
+## Verify The Published Result
 
-The algorithm layer studies a PPO variant for repository-level coding tasks.
+Run the focused test suite:
 
-Target properties:
+```bash
+python -m pytest -q
+```
 
-- stable optimization on long trajectories
-- better credit assignment across read, search, edit, and test actions
-- support for tool-aware or patch-aware advantages
-- explicit treatment of action costs without collapsing useful exploration
-- turn-level critic signals at the tool-call granularity
+Audit the committed result reports:
 
-Candidate ingredients include:
+```bash
+python - <<'PY'
+import json
+from pathlib import Path
 
-- patch-aware policy updates
-- tool-type-conditioned value estimation
-- cost-aware clipping or auxiliary objectives
-- trajectory segmentation around edits and test outcomes
-- compacted sub-trace training for very long rollouts
-- online anti-hack signals that penalize invalid actions without discarding entire trajectories
-- explicit belief blocks for long-horizon task state tracking
+baseline_paths = {
+    0: Path('data/realrepo_lora_comparison_100_seed0_deterministic_v2/report.json'),
+    1: Path('data/realrepo_lora_comparison_100_seed1_deterministic_v2/report.json'),
+    2: Path('data/realrepo_lora_comparison_100_seed2_deterministic_v2/report.json'),
+}
+ppo_paths = {
+    0: Path('data/realrepo_pappo_ppo_100_seed0_grouped_prior_lr1e4_nonorm_updates5_v2/report.json'),
+    1: Path('data/realrepo_pappo_ppo_100_seed1_grouped_prior_lr1e4_nonorm_updates5/report.json'),
+    2: Path('data/realrepo_pappo_ppo_100_seed2_grouped_prior_lr1e4_nonorm_updates5/report.json'),
+}
 
-### 2. Benchmarking
+rows = []
+for seed in [0, 1, 2]:
+    baseline = json.loads(baseline_paths[seed].read_text())
+    ppo = json.loads(ppo_paths[seed].read_text())
+    metrics = {'base': baseline['base_metrics'], **baseline['metrics']}
+    best_name, best = max(metrics.items(), key=lambda item: item[1]['success_rate'])
+    final = ppo['update_reports'][-1]['eval_metrics']
+    rows.append((seed, best_name, best, final, ppo))
 
-The benchmark layer defines how PAPPO should be evaluated.
+mean_best = sum(row[2]['success_rate'] for row in rows) / len(rows)
+mean_ppo = sum(row[3]['success_rate'] for row in rows) / len(rows)
+wins = sum(row[3]['success_rate'] > row[2]['success_rate'] for row in rows)
 
-The project is especially interested in tasks where an agent must:
+print('mean_best_non_ppo_success', round(mean_best, 4))
+print('mean_pappo_ppo_success', round(mean_ppo, 4))
+print('delta', round(mean_ppo - mean_best, 4))
+print('wins', wins, '/', len(rows))
 
-- inspect an unfamiliar repository
-- localize a bug or missing feature
-- make one or more edits
-- run tests or other verification tools
-- recover from failed intermediate attempts
+assert mean_ppo - mean_best >= 0.05
+assert wins >= 2
+assert all(row[4]['train_tasks'] == 70 and row[4]['eval_tasks'] == 30 for row in rows)
+assert all(row[4]['num_rollouts_per_task'] == 2 for row in rows)
+assert all(row[4]['update_reports'][-1]['eval_metrics']['failed_edit_rate'] <= row[2]['failed_edit_rate'] for row in rows)
+assert all(row[4]['update_reports'][-1]['eval_metrics']['avg_tool_cost'] <= row[2]['avg_tool_cost'] for row in rows)
+assert all(row[4]['update_reports'][-1]['eval_metrics']['repeated_test_rate'] <= row[2]['repeated_test_rate'] for row in rows)
+assert all(row[4]['update_reports'][-1]['eval_metrics']['success_rate'] == 1.0 for row in rows)
+assert all(row[4]['update_reports'][-2]['eval_metrics']['success_rate'] == 1.0 for row in rows)
+print('AUDIT_PASS')
+PY
+```
 
-Evaluation should go beyond final task success and include:
+Expected summary:
 
-- resolved issue rate
-- number of tool calls
-- token usage
-- wall-clock cost
-- test efficiency
-- trajectory length
-- stability across random seeds
+```text
+mean_best_non_ppo_success 0.8667
+mean_pappo_ppo_success 1.0
+delta 0.1333
+wins 3 / 3
+AUDIT_PASS
+```
 
-### 3. Interpretability
+## Reproduce The Final Experiment
 
-The interpretability layer studies why the agent behaves the way it does.
+The full run requires a local/downloadable Qwen2.5-Coder-7B-Instruct model and
+a GPU with enough memory for LoRA training.
 
-Key questions include:
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True HF_HUB_DISABLE_XET=1 \
+python scripts/run_realrepo_pappo_ppo.py \
+  --model Qwen/Qwen2.5-Coder-7B-Instruct \
+  --backend hf \
+  --manifest data/realrepofix_100_manifest.jsonl \
+  --train-limit 70 \
+  --eval-limit 30 \
+  --updates 5 \
+  --num-rollouts-per-task 2 \
+  --max-new-tokens 384 \
+  --temperature 0.7 \
+  --max-length 768 \
+  --learning-rate 1e-4 \
+  --ppo-epochs 1 \
+  --local-prior 0.25 \
+  --no-normalize-advantages \
+  --seed 0 \
+  --output-dir data/repro_realrepo_pappo_ppo_seed0 \
+  --local-files-only
+```
 
-- When does the policy decide that another test run is worth the cost?
-- Which hidden states predict a successful patch versus wasted editing?
-- How do value estimates change after reading code, seeing a stack trace, or applying a patch?
-- Can internal signals explain over-searching, over-testing, or premature stopping?
+Run the same command with `--seed 1` and `--seed 2` for the three-seed result.
 
-This part of the project is meant to connect RL for coding agents with mechanistic and behavioral interpretability.
+## Scope
 
-## Value Modeling Hypothesis
-
-PAPPO treats the value model as a first-class research object.
-
-For long-horizon coding agents, the critic should estimate more than final task success. A strong value model should also track patch progress, tool utility, future cost, compaction quality, and failure risk. This enables more stable advantage estimation, better use of compacted sub-traces, more robust handling of abnormal or hacked actions, and clearer interpretation of tool-use behavior.
-
-The working hypothesis is:
-
-- GRPO-style group-relative learning is strong for short, comparable rollouts.
-- Long-horizon coding agents produce irregular trajectories with variable length, tool calls, edits, tests, and compaction boundaries.
-- In this setting, PAPPO should use critic-based turn-level advantages over individual compacted sub-traces.
-- Tool-call turns are a natural credit-assignment unit: they are coarser than tokens, finer than full traces, and often contain enough semantic content for incremental evaluation.
-- Optional belief blocks can expose the agent's current task model, making both actor behavior and critic estimates easier to study.
-- Invalid or hacked tool calls should be handled online by penalizing the bad action while preserving the rest of the rollout when possible.
-
-## Research Goals
-
-The current goals for PAPPO are:
-
-- define a clear PPO-style objective tailored to tool-using coding agents
-- establish a benchmark protocol that exposes long-horizon agent behavior
-- study the trade-off between solution quality and tool expenditure
-- analyze policy behavior with interpretable intermediate signals
-- produce a small, credible, and reproducible research artifact
-
-## Non-Goals
-
-PAPPO is not currently intended to be:
-
-- a generic RL framework
-- a broad agent runtime platform
-- a production orchestration system
-- a repository of many unrelated RL baselines
-
-## Early Roadmap
-
-### Phase 1
-
-- formalize the coding-agent MDP or POMDP
-- define the PAPPO objective and value-learning setup
-- select the initial benchmark tasks
-
-### Phase 2
-
-- implement a minimal training stack
-- compare against strong PPO-style and heuristic baselines
-- characterize behavior under different tool-use budgets
-
-### Phase 3
-
-- run interpretability studies on trained agents
-- analyze tool-use decisions and patch dynamics
-- refine the method based on benchmark failures
-
-## Guiding Principle
-
-PAPPO is based on the belief that coding-agent RL should not only optimize for final correctness. It should also learn how to spend attention, tool use, and iteration budget in a principled way, while remaining understandable enough to study.
+This is a local single-model research finding. It supports the claim that
+turn-local PAPPO credit assignment becomes useful when embedded in a true PPO
+loop. It is not a claim that PAPPO improves every coding model, benchmark, or
+agent runtime.

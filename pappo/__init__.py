@@ -1,0 +1,1 @@
+"""PAPPO core package."""
