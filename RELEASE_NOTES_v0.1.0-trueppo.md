@@ -7,6 +7,8 @@ package.
 
 - Repository: `https://github.com/TerminusAkivili/PAPPO`
 - Tag: `v0.1.0-trueppo`
+- Zenodo DOI: `10.5281/zenodo.20971530`
+- Zenodo concept DOI: `10.5281/zenodo.20971529`
 - Core experiment commit:
   `5d345d06c735dd263ab0a85f24200c52dd9993e5`
 - Software Heritage snapshot:

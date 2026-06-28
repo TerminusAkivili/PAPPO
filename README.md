@@ -1,5 +1,7 @@
 # PAPPO
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20971530.svg)](https://doi.org/10.5281/zenodo.20971530)
+
 PAPPO is a research prototype for **Patch-Aware Proximal Policy Optimization**
 on tool-using coding agents.
 
@@ -28,6 +30,9 @@ update 3 and update 4. See
 - Core experiment commit:
   `5d345d06c735dd263ab0a85f24200c52dd9993e5`
 - Release tag: `v0.1.0-trueppo`
+- Zenodo DOI: [`10.5281/zenodo.20971530`](https://doi.org/10.5281/zenodo.20971530)
+- Zenodo concept DOI:
+  [`10.5281/zenodo.20971529`](https://doi.org/10.5281/zenodo.20971529)
 - Citation metadata: [`CITATION.cff`](CITATION.cff)
 - Zenodo metadata: [`.zenodo.json`](.zenodo.json)
 - Release notes:
@@ -35,8 +40,12 @@ update 3 and update 4. See
 - Software Heritage snapshot:
   `swh:1:snp:51a2836ced67734772ba3c5f0bfa69d4b48e1427`
 
-The Zenodo DOI should be added here after the GitHub-Zenodo integration archives
-the release.
+If you use PAPPO, please cite the archived software release:
+
+```text
+TerminusAkivili. PAPPO: Turn-Local Proximal Policy Optimization for
+Tool-Using Coding Agents. Zenodo. https://doi.org/10.5281/zenodo.20971530
+```
 
 ## License
 
