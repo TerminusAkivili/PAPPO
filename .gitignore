@@ -14,6 +14,7 @@ requirements.txt
 # Publish only the final true-PPO reproducibility package.
 docs/*
 !docs/arxiv_readiness.md
+!docs/pappo_technical_report.md
 !docs/pappo_true_ppo_results.md
 !docs/realrepo_lora_comparison_100.md
 

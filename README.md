@@ -38,6 +38,10 @@ update 3 and update 4. See
 The Zenodo DOI should be added here after the GitHub-Zenodo integration archives
 the release.
 
+## License
+
+PAPPO is released under the Apache License 2.0. See [`LICENSE`](LICENSE).
+
 ## Key Paths
 
 - PPO objective and logprob handling: `pappo/ppo_training.py`
@@ -48,6 +52,7 @@ the release.
 - True-PPO experiment runner: `scripts/run_realrepo_pappo_ppo.py`
 - Baseline runner used for comparison: `scripts/run_realrepo_lora_comparison.py`
 - RealRepoFix manifest: `data/realrepofix_100_manifest.jsonl`
+- Technical report draft: `docs/pappo_technical_report.md`
 - Final result reports:
   - `data/realrepo_lora_comparison_100_seed0_deterministic_v2/report.json`
   - `data/realrepo_lora_comparison_100_seed1_deterministic_v2/report.json`

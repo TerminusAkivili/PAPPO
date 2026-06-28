@@ -6,6 +6,7 @@ authors:
   - family-names: "TerminusAkivili"
 version: "0.1.0-trueppo"
 date-released: "2026-06-28"
+license: "Apache-2.0"
 repository-code: "https://github.com/TerminusAkivili/PAPPO"
 url: "https://github.com/TerminusAkivili/PAPPO/releases/tag/v0.1.0-trueppo"
 abstract: >-
