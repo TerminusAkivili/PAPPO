@@ -14,6 +14,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from pappo.llm_agent_pilot import (  # noqa: E402
     HuggingFaceRepairBackend,
+    ReflexionRepairBackend,
+    ReActRetryRepairBackend,
     ScriptedRepairBackend,
     discover_local_models,
 )
@@ -75,7 +77,11 @@ def main() -> None:
         "--model-path",
         default="Qwen/Qwen2.5-Coder-7B-Instruct",
     )
-    parser.add_argument("--backend", choices=["model", "hf", "scripted"], default="model")
+    parser.add_argument(
+        "--backend",
+        choices=["model", "hf", "scripted", "react_retry", "reflexion"],
+        default="model",
+    )
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--limit", type=int, default=5)
     parser.add_argument("--trajectories", type=Path)
@@ -177,8 +183,14 @@ def main() -> None:
         )
         return
 
+    backend_cls = HuggingFaceRepairBackend
+    if args.backend == "react_retry":
+        backend_cls = ReActRetryRepairBackend
+    elif args.backend == "reflexion":
+        backend_cls = ReflexionRepairBackend
+
     try:
-        backend = HuggingFaceRepairBackend(
+        backend = backend_cls(
             model_path=args.model_path,
             max_new_tokens=args.max_new_tokens,
             temperature=args.temperature,

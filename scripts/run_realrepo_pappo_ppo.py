@@ -12,13 +12,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from pappo.ppo_rollout import build_ppo_samples_from_trajectory  # noqa: E402
+from pappo.ppo_rollout import (  # noqa: E402
+    PPO_ACTION_SCOPES,
+    PPO_REWARD_MODES,
+    build_ppo_samples_from_trajectory,
+)
 from pappo.ppo_training import (  # noqa: E402
     apply_advantage_prior,
     fill_samples_with_model_logprobs,
     train_pappo_ppo_update,
 )
-from pappo.turn_critic import GroupMeanTurnCritic, MeanTurnCritic  # noqa: E402
+from pappo.turn_critic import GroupMeanTurnCritic, MeanTurnCritic, RLOOTurnCritic  # noqa: E402
 from scripts.run_realrepo_lora_comparison import (  # noqa: E402
     _make_backend,
     _rollout,
@@ -95,6 +99,21 @@ def main() -> None:
     parser.add_argument("--no-normalize-advantages", action="store_true")
     parser.add_argument("--kl-beta", type=float, default=0.01)
     parser.add_argument("--clip-epsilon", type=float, default=0.2)
+    parser.add_argument(
+        "--critic-mode",
+        choices=["auto", "tool_mean", "group_mean", "rloo"],
+        default="auto",
+    )
+    parser.add_argument(
+        "--reward-mode",
+        choices=list(PPO_REWARD_MODES),
+        default="pappo_turn_local",
+    )
+    parser.add_argument(
+        "--action-scope",
+        choices=list(PPO_ACTION_SCOPES),
+        default="edit",
+    )
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -137,9 +156,42 @@ def main() -> None:
         samples = [
             sample
             for trajectory in train_rollouts
-            for sample in build_ppo_samples_from_trajectory(trajectory)
+            for sample in build_ppo_samples_from_trajectory(
+                trajectory,
+                reward_mode=args.reward_mode,
+                action_scope=args.action_scope,
+            )
         ]
-        if args.num_rollouts_per_task > 1:
+        if args.critic_mode == "auto":
+            critic_mode = "group_mean" if args.num_rollouts_per_task > 1 else "tool_mean"
+        else:
+            critic_mode = args.critic_mode
+        if critic_mode == "rloo":
+            rloo_critic = RLOOTurnCritic()
+            sample_ids = [
+                f"{sample.trajectory_id}:{sample.turn_id}:{index}"
+                for index, sample in enumerate(samples)
+            ]
+            rloo_critic.fit(
+                sample_ids=sample_ids,
+                group_keys=[sample.trajectory_id for sample in samples],
+                tool_names=[sample.tool_name for sample in samples],
+                targets=[sample.target for sample in samples],
+            )
+            samples = [
+                replace(
+                    sample,
+                    value=rloo_critic.predict(
+                        sample_id,
+                        sample.trajectory_id,
+                        sample.tool_name,
+                    ),
+                )
+                for sample_id, sample in zip(sample_ids, samples, strict=True)
+            ]
+            critic = rloo_critic
+            critic_type = "rloo"
+        elif critic_mode == "group_mean":
             group_critic = GroupMeanTurnCritic()
             group_critic.fit(
                 group_keys=[sample.trajectory_id for sample in samples],
@@ -178,6 +230,9 @@ def main() -> None:
         _write_samples(update_dir / "ppo_samples.jsonl", samples)
         critic_metrics = {
             "critic_type": critic_type,
+            "critic_mode": args.critic_mode,
+            "reward_mode": args.reward_mode,
+            "action_scope": args.action_scope,
             "advantage_prior": args.local_prior,
             "critic_samples": len(samples),
             "critic_value_mean": (
@@ -233,6 +288,9 @@ def main() -> None:
         "train_tasks": args.train_limit,
         "eval_tasks": args.eval_limit,
         "num_rollouts_per_task": args.num_rollouts_per_task,
+        "critic_mode": args.critic_mode,
+        "reward_mode": args.reward_mode,
+        "action_scope": args.action_scope,
         "local_prior": args.local_prior,
         "normalize_advantages": not args.no_normalize_advantages,
         "base_metrics": base_metrics,

@@ -29,12 +29,26 @@ pappo/*
 !pappo/ppo_training.py
 !pappo/ppo_rollout.py
 !pappo/turn_critic.py
+!pappo/top_paper.py
+!pappo/preference_pairs.py
+!pappo/swe_bench_lite.py
 
 scripts/*
 !scripts/generate_realrepofix.py
 !scripts/run_llm_agent_pilot.py
 !scripts/run_realrepo_lora_comparison.py
 !scripts/run_realrepo_pappo_ppo.py
+!scripts/plan_top_paper_experiments.py
+!scripts/analyze_top_paper_results.py
+!scripts/build_preference_pairs.py
+!scripts/run_preference_lora_baseline.py
+!scripts/prepare_swe_bench_lite_subset.py
+!scripts/audit_top_paper_plan.py
+!scripts/run_top_paper_jobs.py
+!scripts/run_swe_bench_lite_pilot.py
+!scripts/run_swe_bench_lora_baseline.py
+!scripts/run_swe_bench_pappo_ppo.py
+!scripts/run_swe_bench_preference_lora.py
 
 tests/*
 !tests/test_ppo_training.py
@@ -42,6 +56,9 @@ tests/*
 !tests/test_turn_critic.py
 !tests/test_realrepo_pappo_ppo_script.py
 !tests/test_realrepo_lora_comparison.py
+!tests/test_top_paper_framework.py
+!tests/test_preference_pairs.py
+!tests/test_swe_bench_lite.py
 
 # Keep the repository focused on the final reproducibility package. Local
 # rollout dumps, adapter checkpoints, and exploratory experiment directories are

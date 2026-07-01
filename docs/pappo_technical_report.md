@@ -425,7 +425,28 @@ PAPPO-PPO wins on all three seeds. The mean held-out success improvement over
 the best non-PPO baseline is 13.33 percentage points, while failed edits fall to
 zero and average tool cost does not increase.
 
-### 8.2 Checkpoint Stability
+### 8.2 Quantified Benefit
+
+Aggregating the three held-out evaluation splits gives a 90-task evaluation
+pool. In this pool, PAPPO-PPO solves 12 more tasks than the best non-PPO
+baseline while using the same measured tool budget.
+
+| Metric | Best Non-PPO | PAPPO-PPO | Benefit |
+| --- | ---: | ---: | --- |
+| Held-out success | 78/90 | 90/90 | 12 additional solved tasks |
+| Success rate | 86.67% | 100.00% | +13.33 percentage points |
+| Failure rate | 13.33% | 0.00% | 100% fewer observed failures |
+| Failed edit | 12/90 | 0/90 | 12 fewer failed edits |
+| Average tool cost | 8.50 | 8.50 | 0 cost increase |
+| Total eval tool cost | 765 | 765 | no extra tool calls |
+| Repeated test rate | 0.00% | 0.00% | no regression |
+
+The seed-level task counts make the improvement concrete: seed 0 improves from
+25/30 to 30/30 solved tasks, seed 1 from 27/30 to 30/30, and seed 2 from 26/30
+to 30/30. The total improvement is therefore 78/90 to 90/90, or 12 additional
+successful repairs with no measured increase in tool usage.
+
+### 8.3 Checkpoint Stability
 
 | Seed | Update 0 | Update 1 | Update 2 | Update 3 | Update 4 |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -436,7 +457,7 @@ zero and average tool cost does not increase.
 The improvement is not a single late checkpoint spike. All three seeds reach
 1.0000 held-out success by update 3 and keep it at update 4.
 
-### 8.3 KL Diagnostics
+### 8.4 KL Diagnostics
 
 | Seed | Update 0 | Update 1 | Update 2 | Update 3 | Update 4 |
 | ---: | ---: | ---: | ---: | ---: | ---: |

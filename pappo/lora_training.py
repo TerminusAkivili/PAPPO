@@ -130,6 +130,7 @@ def make_tiny_model(vocab_size: int) -> GPT2LMHeadModel:
 def load_model_and_tokenizer(
     model_name: str,
     local_files_only: bool,
+    device_map="auto",
 ) -> tuple[torch.nn.Module, PreTrainedTokenizerFast | AutoTokenizer, str]:
     """Load the tiny local model or a Hugging Face causal LM."""
 
@@ -148,7 +149,7 @@ def load_model_and_tokenizer(
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         torch_dtype=dtype,
-        device_map="auto",
+        device_map=device_map,
         trust_remote_code=True,
         local_files_only=local_files_only,
     )
@@ -339,6 +340,33 @@ def train_lora_adapter(
     """Run one weighted LoRA update and save the adapter."""
 
     examples = build_training_examples(trajectories, method, limit_examples)
+    return train_lora_from_examples(
+        model_name=model_name,
+        examples=examples,
+        method=method,
+        output_dir=output_dir,
+        max_length=max_length,
+        learning_rate=learning_rate,
+        epochs=epochs,
+        local_files_only=local_files_only,
+        checkpoint_dirs_by_example=checkpoint_dirs_by_example,
+    )
+
+
+def train_lora_from_examples(
+    *,
+    model_name: str,
+    examples: list[TrainingExample],
+    method: str,
+    output_dir: Path,
+    max_length: int = 384,
+    learning_rate: float = 1e-4,
+    epochs: int = 1,
+    local_files_only: bool = False,
+    checkpoint_dirs_by_example: dict[int, Path] | None = None,
+) -> LoraTrainResult:
+    """Run one weighted LoRA update from pre-built examples and save the adapter."""
+
     if not examples:
         raise ValueError("no training examples found")
     if epochs < 1:

@@ -212,15 +212,20 @@ def _load_policy_with_optional_adapter(
     local_files_only: bool,
     trainable_adapter: bool,
 ):
+    device_map = {"": 0} if torch.cuda.is_available() else "auto"
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     model, tokenizer, model_label = load_model_and_tokenizer(
         model_name,
         local_files_only=local_files_only,
+        device_map=device_map,
     )
     if adapter_path is not None:
         model = PeftModel.from_pretrained(
             model,
             adapter_path,
             is_trainable=trainable_adapter,
+            device_map=device_map,
         )
     return model, tokenizer, model_label
 

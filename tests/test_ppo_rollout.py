@@ -101,3 +101,64 @@ def test_ppo_sample_penalizes_applied_edit_when_final_reward_fails() -> None:
 
     assert len(samples) == 1
     assert samples[0].target < 0.0
+
+
+def test_ppo_samples_support_reward_modes_and_all_tool_scope() -> None:
+    trajectory = AgentTrajectory(
+        trajectory_id="t1",
+        final_reward=1.0,
+        metadata={"task_id": "task-1"},
+        events=(
+            AgentEvent(kind=MESSAGE, content="Fix the bug."),
+            AgentEvent(kind=TOOL_CALL, tool_name="search", content="search tests"),
+            AgentEvent(
+                kind=TOOL_RESULT,
+                tool_name="search",
+                content="tests/test_logic.py\nassert fixed()",
+            ),
+            AgentEvent(kind=TOOL_CALL, tool_name="edit", content="replace file"),
+            AgentEvent(
+                kind=TOOL_RESULT,
+                tool_name="edit",
+                content="patch applied",
+                metadata={
+                    "patch_applied": True,
+                    "raw_generated_text": "def fixed(): return True",
+                },
+            ),
+            AgentEvent(kind=TOOL_CALL, tool_name="run_test", content="pytest"),
+            AgentEvent(
+                kind=TOOL_RESULT,
+                tool_name="run_test",
+                content="passed",
+                metadata={"pytest_reward": 1.0},
+            ),
+        ),
+    )
+
+    trace_samples = build_ppo_samples_from_trajectory(
+        trajectory,
+        reward_mode="trace",
+        action_scope="all_tools",
+    )
+    token_samples = build_ppo_samples_from_trajectory(
+        trajectory,
+        reward_mode="token_broadcast",
+        action_scope="edit",
+    )
+    pappo_samples = build_ppo_samples_from_trajectory(
+        trajectory,
+        reward_mode="pappo_turn_local",
+        action_scope="all_tools",
+    )
+
+    assert [sample.tool_name for sample in trace_samples] == [
+        "search",
+        "edit",
+        "run_test",
+    ]
+    assert {sample.target for sample in trace_samples} == {1.0}
+    assert len(token_samples) == 1
+    assert token_samples[0].tool_name == "edit"
+    assert token_samples[0].target == 1.0
+    assert [sample.target for sample in pappo_samples] == [0.25, 1.0, 1.0]

@@ -291,6 +291,180 @@ class HuggingFaceRepairBackend:
         )
 
 
+class ReActRetryRepairBackend(HuggingFaceRepairBackend):
+    """HF repair backend that retries once after a failed edit/test attempt."""
+
+    name: str = "react_retry_test"
+    max_attempts: int = 2
+
+    def _retry_prompt(
+        self,
+        task: RealRepoFixTask,
+        source_before: str,
+        search_result: str,
+        pytest_before: str,
+        previous_output: str,
+        previous_test_output: str,
+    ) -> str:
+        return self._prompt(task, source_before, search_result, pytest_before) + (
+            "\nThe previous attempt failed. Try one more repair.\n"
+            "Previous model output:\n"
+            f"```\n{previous_output[-2000:]}\n```\n"
+            "Previous pytest output:\n"
+            f"```\n{previous_test_output[-4000:]}\n```\n"
+        )
+
+    def repair(self, task: RealRepoFixTask) -> AgentTrajectory:
+        source_path = task.repo_dir / task.source_file
+        source_path.write_text(task.buggy_source, encoding="utf-8")
+        source_before = source_path.read_text(encoding="utf-8")
+        search_result = search_task_context(task)
+        before = run_pytest_reward(task)
+        pytest_before = f"returncode={before.returncode}\n{before.stdout}\n{before.stderr}"
+
+        events: list[AgentEvent] = [
+            AgentEvent(kind=MESSAGE, content=task.issue),
+            AgentEvent(
+                kind=TOOL_CALL,
+                tool_name="read_file",
+                content=str(task.source_file),
+                cost=1.0,
+            ),
+            AgentEvent(
+                kind=TOOL_RESULT,
+                tool_name="read_file",
+                content=source_before,
+                cost=0.5,
+                metadata={"pytest_before_reward": before.reward},
+            ),
+            AgentEvent(
+                kind=TOOL_CALL,
+                tool_name="search",
+                content=f"search relevant tests for {task.source_file}",
+                cost=1.0,
+            ),
+            AgentEvent(
+                kind=TOOL_RESULT,
+                tool_name="search",
+                content=search_result,
+                cost=0.5,
+                metadata={"test_file": str(task.test_file)},
+            ),
+        ]
+
+        final_reward = 0.0
+        patch_applied = False
+        previous_output = ""
+        previous_test_output = pytest_before
+        for attempt_index in range(self.max_attempts):
+            if attempt_index == 0:
+                prompt = self._prompt(task, source_before, search_result, pytest_before)
+            else:
+                source_path.write_text(task.buggy_source, encoding="utf-8")
+                prompt = self._retry_prompt(
+                    task,
+                    source_before,
+                    search_result,
+                    pytest_before,
+                    previous_output,
+                    previous_test_output,
+                )
+            generated_text, generation_metadata = self._generate(prompt)
+            replacement = extract_replacement_source(generated_text)
+            attempt_patch_applied = replacement is not None
+            if replacement is not None:
+                source_path.write_text(replacement, encoding="utf-8")
+            after = run_pytest_reward(task)
+            final_reward = after.reward
+            patch_applied = patch_applied or attempt_patch_applied
+            previous_output = generated_text
+            previous_test_output = (
+                f"pytest returncode={after.returncode}\n{after.stdout}\n{after.stderr}"
+            )
+            events.extend(
+                [
+                    AgentEvent(
+                        kind=TOOL_CALL,
+                        tool_name="edit",
+                        content=f"attempt {attempt_index + 1}: replace {task.source_file}",
+                        cost=2.0,
+                        metadata={**generation_metadata, "attempt": attempt_index + 1},
+                    ),
+                    AgentEvent(
+                        kind=TOOL_RESULT,
+                        tool_name="edit",
+                        content=replacement if replacement is not None else generated_text,
+                        cost=0.5,
+                        metadata={
+                            "patch_applied": attempt_patch_applied,
+                            "backend": self.name,
+                            "model_path": self.model_path,
+                            "raw_generated_text": generated_text,
+                            "attempt": attempt_index + 1,
+                        },
+                    ),
+                    AgentEvent(
+                        kind=TOOL_CALL,
+                        tool_name="run_test",
+                        content=" ".join(task.test_command),
+                        cost=2.0,
+                        metadata={"attempt": attempt_index + 1},
+                    ),
+                    AgentEvent(
+                        kind=TOOL_RESULT,
+                        tool_name="run_test",
+                        content=previous_test_output,
+                        cost=1.0,
+                        metadata={
+                            "pytest_reward": after.reward,
+                            "attempt": attempt_index + 1,
+                        },
+                    ),
+                ]
+            )
+            if after.reward > 0.0:
+                break
+
+        return AgentTrajectory(
+            trajectory_id=f"{task.task_id}-{self.name}",
+            events=tuple(events),
+            final_reward=final_reward,
+            metadata={
+                "benchmark": "realrepofix",
+                "template": task.template,
+                "repo_dir": str(task.repo_dir),
+                "agent_backend": self.name,
+                "full_llm": self.is_full_llm,
+                "model_path": self.model_path,
+                "patch_applied": patch_applied,
+            },
+        )
+
+
+class ReflexionRepairBackend(ReActRetryRepairBackend):
+    """Retry backend that explicitly frames the second attempt as reflection."""
+
+    name: str = "reflexion_self_repair"
+
+    def _retry_prompt(
+        self,
+        task: RealRepoFixTask,
+        source_before: str,
+        search_result: str,
+        pytest_before: str,
+        previous_output: str,
+        previous_test_output: str,
+    ) -> str:
+        return self._prompt(task, source_before, search_result, pytest_before) + (
+            "\nPrevious attempt failed. Reflect on the pytest failure and return "
+            "only a corrected full replacement file.\n"
+            "Previous model output:\n"
+            f"```\n{previous_output[-2000:]}\n```\n"
+            "Failure feedback:\n"
+            f"```\n{previous_test_output[-4000:]}\n```\n"
+        )
+
+
 @dataclass(frozen=True)
 class ScriptedRepairBackend:
     """Deterministic backend that applies the known expected fix."""

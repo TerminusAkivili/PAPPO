@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import torch
 import pytest
 
+import pappo.ppo_training as ppo_training
 from pappo.ppo_training import (
     PPOTurnSample,
+    _load_policy_with_optional_adapter,
     apply_advantage_prior,
     compute_turn_ppo_loss,
     fill_samples_with_model_logprobs,
@@ -246,6 +250,50 @@ def test_train_pappo_ppo_update_can_continue_from_existing_adapter(tmp_path) -> 
     assert result.status == "pappo_ppo_update_completed"
     assert result.adapter_dir == str(second_adapter)
     assert (second_adapter / "adapter_config.json").exists()
+
+
+def test_load_policy_forces_single_cuda_device_map_for_adapter(monkeypatch, tmp_path) -> None:
+    calls = {}
+    emptied = []
+
+    class TinyModel(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.proj = torch.nn.Linear(1, 1)
+
+    def fake_load_model_and_tokenizer(model_name, local_files_only, device_map="auto"):
+        calls["model_name"] = model_name
+        calls["local_files_only"] = local_files_only
+        calls["load_device_map"] = device_map
+        return TinyModel(), object(), "fake-model"
+
+    def fake_from_pretrained(model, adapter_path, is_trainable, **kwargs):
+        calls["adapter_path"] = adapter_path
+        calls["is_trainable"] = is_trainable
+        calls["adapter_device_map"] = kwargs.get("device_map")
+        return model
+
+    monkeypatch.setattr(ppo_training.torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(ppo_training.torch.cuda, "empty_cache", lambda: emptied.append(True))
+    monkeypatch.setattr(ppo_training, "load_model_and_tokenizer", fake_load_model_and_tokenizer)
+    monkeypatch.setattr(
+        ppo_training,
+        "PeftModel",
+        SimpleNamespace(from_pretrained=fake_from_pretrained),
+    )
+
+    _load_policy_with_optional_adapter(
+        "fake-hf-model",
+        adapter_path=tmp_path / "adapter",
+        local_files_only=True,
+        trainable_adapter=False,
+    )
+
+    assert emptied
+    assert calls["load_device_map"] == {"": 0}
+    assert calls["adapter_device_map"] == {"": 0}
+    assert calls["adapter_path"] == tmp_path / "adapter"
+    assert calls["is_trainable"] is False
 
 
 def test_fill_samples_with_model_logprobs_populates_old_ref_and_mask() -> None:
